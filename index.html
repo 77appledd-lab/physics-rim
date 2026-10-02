@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>전자기 유도 실험 시뮬레이터</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+        
+        * {
+            box-sizing: border-box;
+            font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+        }
+
+        html, body {
+            height: 100vh;
+            width: 100vw;
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Strict NO scrollbar policy */
+            background-color: #f8fafc;
+            color: #0f172a;
+        }
+
+        /* Light Card Base Style */
+        .light-card {
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+        }
+
+        /* Custom Scrollbar for inner elements if needed */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col justify-between p-3 gap-2.5 bg-slate-50">
+
+    <!-- App Header -->
+    <header class="light-card px-4 py-2 flex justify-between items-center shrink-0 border-slate-200">
+        <div class="flex items-center gap-2.5">
+            <div class="p-2 bg-blue-50 text-blue-600 rounded-lg border border-blue-100 flex items-center justify-center">
+                <i class="fa-solid fa-magnet text-lg"></i>
+            </div>
+            <div>
+                <h1 class="text-base font-bold text-slate-800 leading-tight">전자기 유도 가상 실험실</h1>
+                <p class="text-[11px] text-slate-500">패러데이 전자기 유도 법칙 (Faraday's Law of Induction)</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            <span class="text-xs bg-blue-50 text-blue-700 px-3 py-1 rounded-full border border-blue-200 font-medium flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+                실시간 가상 시뮬레이션
+            </span>
+        </div>
+    </header>
+
+    <!-- Main Dashboard 2x2 Grid Layout (Fits 100vh) -->
+    <main class="flex-grow grid grid-cols-1 md:grid-cols-2 gap-2.5 min-h-0">
+
+        <!-- PANEL 1: 변인 설정 및 컨트롤 (Controls) -->
+        <section class="light-card p-3 flex flex-col justify-between overflow-hidden">
+            <div>
+                <div class="border-b border-slate-100 pb-2 mb-2.5 flex items-center justify-between">
+                    <h2 class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                        <i class="fa-solid fa-sliders text-blue-600"></i> 변인 설정 및 조건 조작
+                    </h2>
+                    <span class="text-[10px] px-2 py-0.5 bg-blue-50 text-blue-600 rounded font-bold">실험 조건</span>
+                </div>
+
+                <div class="space-y-2.5 text-xs">
+                    <!-- Controlled Variables -->
+                    <div class="bg-slate-50 p-2 rounded-lg border border-slate-200/80">
+                        <div class="text-slate-600 font-bold mb-1 flex justify-between items-center text-[11px]">
+                            <span><i class="fa-solid fa-lock text-slate-400 mr-1"></i>통제변인: 코일 감은 수</span>
+                            <span id="turnDisplay" class="text-blue-600 font-mono font-bold">400 회</span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-1.5">
+                            <button onclick="setTurns(200)" id="btnT200" class="py-1 px-2 bg-white text-slate-600 hover:bg-slate-100 rounded border border-slate-200 text-[11px] font-medium transition-all">200회</button>
+                            <button onclick="setTurns(400)" id="btnT400" class="py-1 px-2 bg-blue-600 text-white rounded border border-blue-600 text-[11px] font-bold shadow-sm transition-all">400회</button>
+                            <button onclick="setTurns(800)" id="btnT800" class="py-1 px-2 bg-white text-slate-600 hover:bg-slate-100 rounded border border-slate-200 text-[11px] font-medium transition-all">800회</button>
+                        </div>
+                    </div>
+
+                    <!-- Independent Variable (Drop Height) -->
+                    <div class="bg-slate-50 p-2 rounded-lg border border-slate-200/80">
+                        <div class="text-slate-600 font-bold mb-1 flex justify-between items-center text-[11px]">
+                            <span><i class="fa-solid fa-arrows-up-down text-emerald-600 mr-1"></i>조작변인: 자석 낙하 높이</span>
+                            <span id="heightDisplay" class="text-emerald-600 font-mono font-bold">10 cm</span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-1.5">
+                            <button onclick="setHeight(5)" id="btnH5" class="py-1.5 bg-white text-slate-700 hover:bg-slate-100 rounded border border-slate-200 text-xs font-semibold transition-all">5 cm</button>
+                            <button onclick="setHeight(10)" id="btnH10" class="py-1.5 bg-emerald-600 text-white rounded border border-emerald-600 text-xs font-bold shadow-sm transition-all">10 cm</button>
+                            <button onclick="setHeight(15)" id="btnH15" class="py-1.5 bg-white text-slate-700 hover:bg-slate-100 rounded border border-slate-200 text-xs font-semibold transition-all">15 cm</button>
+                        </div>
+                    </div>
+
+                    <!-- Dependent Variable Description -->
+                    <div class="bg-indigo-50/60 p-2 rounded-lg border border-indigo-100/80 text-[11px]">
+                        <span class="font-bold text-indigo-700"><i class="fa-solid fa-chart-line mr-1"></i>종속변인:</span>
+                        <span class="text-indigo-900">유도 기전력(전압)의 실시간 변화 및 최고 피크값</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Button Bar -->
+            <div class="pt-2 grid grid-cols-3 gap-1.5 shrink-0">
+                <button id="startBtn" onclick="startExperiment()" class="py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-sm shadow-blue-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-1 text-xs col-span-1">
+                    <i class="fa-solid fa-play text-[10px]"></i> 실험 시작
+                </button>
+                <button id="resetBtn" onclick="resetCurrentDrop()" class="py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg border border-slate-200 active:scale-[0.98] transition-all flex items-center justify-center gap-1 text-xs">
+                    <i class="fa-solid fa-arrow-rotate-left text-[10px]"></i> 자석 초기화
+                </button>
+                <button id="clearChartBtn" onclick="clearAllChartData()" class="py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 font-medium rounded-lg border border-rose-200 active:scale-[0.98] transition-all flex items-center justify-center gap-1 text-xs">
+                    <i class="fa-solid fa-trash-can text-[10px]"></i> 그래프 비우기
+                </button>
+            </div>
+        </section>
+
+        <!-- PANEL 2: 실험 화면 (Canvas Animation View) -->
+        <section class="light-card p-3 flex flex-col justify-between overflow-hidden relative">
+            <div class="border-b border-slate-100 pb-1.5 flex items-center justify-between shrink-0">
+                <h2 class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <i class="fa-solid fa-flask-vial text-emerald-600"></i> 가상 실험 장치 (Visual View)
+                </h2>
+                <span id="statusTag" class="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full font-semibold">대기 중</span>
+            </div>
+
+            <!-- Canvas Container -->
+            <div class="relative w-full flex-grow my-1 bg-slate-50/80 rounded-lg border border-slate-200 overflow-hidden flex items-center justify-center">
+                <canvas id="simCanvas" class="w-full h-full block"></canvas>
+                
+                <!-- Voltage Signal / Galvanometer Glowing Badge -->
+                <div id="ledIndicator" class="absolute top-2 right-2 flex items-center gap-2 bg-white/95 backdrop-blur px-2.5 py-1 rounded-full border border-slate-200 shadow-sm">
+                    <div id="ledBulb" class="w-3 h-3 rounded-full bg-slate-300 transition-all duration-75"></div>
+                    <span id="voltageReadout" class="text-[11px] font-mono font-bold text-slate-500">0.00 V</span>
+                </div>
+            </div>
+
+            <div class="text-[10px] text-slate-400 text-center shrink-0">
+                * 자석이 코일을 통과할 때 유도 전류가 발생하여 검류계 전압 피크가 형성됩니다.
+            </div>
+        </section>
+
+        <!-- PANEL 3: 실시간 수치 중력 그래프 (Chart.js Simultaneous Multi-Overlay) -->
+        <section class="light-card p-3 flex flex-col justify-between overflow-hidden">
+            <div class="border-b border-slate-100 pb-1.5 flex items-center justify-between shrink-0">
+                <h2 class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <i class="fa-solid fa-chart-area text-indigo-600"></i> 유도 기전력 비교 그래프 (Overlay Chart)
+                </h2>
+                <span class="text-[10px] text-slate-500 font-medium">실시간 동시 비교</span>
+            </div>
+
+            <!-- Dynamic Chart Container -->
+            <div class="relative w-full flex-grow my-1 min-h-0">
+                <canvas id="voltageChart"></canvas>
+            </div>
+        </section>
+
+        <!-- PANEL 4: 수치 측정 및 물리 법칙 요약 (Info Panel) -->
+        <section class="light-card p-3 flex flex-col justify-between overflow-hidden">
+            <div class="border-b border-slate-100 pb-1.5 flex items-center justify-between shrink-0">
+                <h2 class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <i class="fa-solid fa-square-poll-vertical text-amber-500"></i> 측정 결과 및 물리 원리
+                </h2>
+                <span class="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-600 rounded font-medium">데이터 분석</span>
+            </div>
+
+            <!-- Live Readings Grid -->
+            <div class="grid grid-cols-3 gap-1.5 my-1.5">
+                <div class="bg-slate-50 p-2 rounded-lg border border-slate-200 text-center">
+                    <div class="text-[10px] text-slate-500 font-medium">최대 유도전압 (Peak)</div>
+                    <div class="mt-0.5">
+                        <span id="resMaxVoltage" class="text-sm font-bold font-mono text-blue-600">0.00</span>
+                        <span class="text-[10px] text-slate-400 font-mono"> V</span>
+                    </div>
+                </div>
+                <div class="bg-slate-50 p-2 rounded-lg border border-slate-200 text-center">
+                    <div class="text-[10px] text-slate-500 font-medium">코일 통과 속도</div>
+                    <div class="mt-0.5">
+                        <span id="resSpeed" class="text-sm font-bold font-mono text-emerald-600">0.00</span>
+                        <span class="text-[10px] text-slate-400 font-mono"> m/s</span>
+                    </div>
+                </div>
+                <div class="bg-slate-50 p-2 rounded-lg border border-slate-200 text-center">
+                    <div class="text-[10px] text-slate-500 font-medium">총 낙하 시간</div>
+                    <div class="mt-0.5">
+                        <span id="resTime" class="text-sm font-bold font-mono text-amber-600">0.000</span>
+                        <span class="text-[10px] text-slate-400 font-mono"> s</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scientific Explanation Summary Card -->
+            <div class="bg-blue-900 text-slate-100 p-2.5 rounded-lg text-xs leading-relaxed flex-grow flex flex-col justify-center shadow-inner">
+                <div class="font-bold text-amber-300 mb-1 flex items-center gap-1.5 text-[11px]">
+                    <i class="fa-solid fa-book-bookmark text-amber-400"></i> 원리 설명: 패러데이 전자기 유도 법칙
+                </div>
+                <p class="text-[11px] text-slate-200 leading-normal">
+                    자석이 코일을 지날 때 코일을 통과하는 자속이 변하여 **유도 기전력($V = -N \cdot \frac{\Delta\Phi}{\Delta t}$)**이 발생합니다.
+                    낙하 높이가 높아지면 자석의 통과 속도가 증가하고, 자속의 변화율이 커지므로 유도 기전력의 피크(Peak) 크기가 커집니다.
+                </p>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        // Global Simulation State Variables
+        let selectedHeight = 10; // 5, 10, 15 cm
+        let selectedTurns = 400;  // 200, 400, 800 turns
+        let isRunning = false;
+        let animId = null;
+
+        // Physics Scale Variables
+        const g = 980; // gravity in cm/s^2
+        let magnetY = 0;
+        let magnetVelocity = 0;
+        let simTime = 0;
+        let lastTime = null;
+
+        // Peak and Data Measurements for current run
+        let currentPeakV = 0;
+        let currentSpeed = 0;
+        let currentPassTime = 0;
+
+        // Canvas & Chart Objects
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+        let chart = null;
+
+        // Color Palettes for Multi-Overlay Graphs (Bright theme accessible colors)
+        const conditionColors = {
+            '5cm': { border: '#2563eb', bg: 'rgba(37, 99, 235, 0.1)' },    // Blue
+            '10cm': { border: '#059669', bg: 'rgba(5, 150, 105, 0.1)' },   // Emerald Green
+            '15cm': { border: '#d97706', bg: 'rgba(217, 119, 6, 0.1)' }    // Amber
+        };
+
+        // Temporary data buffers during simulation loop
+        let currentRunDataset = [];
+
+        // Resize Canvas dynamically inside flexbox container
+        function resizeCanvas() {
+            if (!canvas) return;
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            drawScene();
+        }
+
+        function initChart() {
+            const chartCtx = document.getElementById('voltageChart').getContext('2d');
+            chart = new Chart(chartCtx, {
+                type: 'line',
+                data: {
+                    datasets: [] // Dynamic multi-trace datasets overlay
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            title: { display: true, text: '시간 (s)', color: '#64748b', font: { size: 10, weight: 'bold' } },
+                            ticks: { color: '#64748b', font: { size: 9 }, stepSize: 0.1 },
+                            grid: { color: '#f1f5f9' },
+                            min: 0,
+                            max: 0.6
+                        },
+                        y: {
+                            min: -12,
+                            max: 12,
+                            title: { display: true, text: '유도 전압 (V)', color: '#64748b', font: { size: 10, weight: 'bold' } },
+                            ticks: { color: '#64748b', font: { size: 9 } },
+                            grid: { color: '#e2e8f0' }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                font: { size: 10, family: 'Pretendard' },
+                                boxWidth: 12,
+                                padding: 8
+                            }
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                label: (context) => `${context.dataset.label}: ${context.parsed.y.toFixed(2)} V`
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Change Coil Turns Option
+        function setTurns(turns) {
+            if (isRunning) return;
+            selectedTurns = turns;
+            document.getElementById('turnDisplay').innerText = turns + ' 회';
+
+            [200, 400, 800].forEach(val => {
+                const btn = document.getElementById(`btnT${val}`);
+                if (val === turns) {
+                    btn.className = 'py-1 px-2 bg-blue-600 text-white rounded border border-blue-600 text-[11px] font-bold shadow-sm transition-all';
+                } else {
+                    btn.className = 'py-1 px-2 bg-white text-slate-600 hover:bg-slate-100 rounded border border-slate-200 text-[11px] font-medium transition-all';
+                }
+            });
+        }
+
+        // Change Drop Height Option
+        function setHeight(h) {
+            if (isRunning) return;
+            selectedHeight = h;
+            document.getElementById('heightDisplay').innerText = h + ' cm';
+
+            [5, 10, 15].forEach(val => {
+                const btn = document.getElementById(`btnH${val}`);
+                if (val === h) {
+                    btn.className = 'py-1.5 bg-emerald-600 text-white rounded border border-emerald-600 text-xs font-bold shadow-sm transition-all';
+                } else {
+                    btn.className = 'py-1.5 bg-white text-slate-700 hover:bg-slate-100 rounded border border-slate-200 text-xs font-semibold transition-all';
+                }
+            });
+            drawScene();
+        }
+
+        function drawScene() {
+            if (!ctx) return;
+            const w = canvas.width;
+            const h = canvas.height;
+            ctx.clearRect(0, 0, w, h);
+
+            const cx = w / 2;
+            const coilCenterY = h - 55;
+            const coilHeight = 42;
+            const coilWidth = 60;
+
+            const scalePixelPerCm = Math.min((h - 100) / 18, 9);
+
+            // 1. Stand Line
+            ctx.strokeStyle = '#cbd5e1';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(cx - 75, h - 10);
+            ctx.lineTo(cx - 75, 15);
+            ctx.stroke();
+
+            // 2. Height Ruler
+            ctx.fillStyle = '#64748b';
+            ctx.font = '10px sans-serif';
+            [0, 5, 10, 15].forEach(mark => {
+                const markY = coilCenterY - (mark * scalePixelPerCm) - 10;
+                ctx.beginPath();
+                ctx.moveTo(cx - 80, markY);
+                ctx.lineTo(cx - 70, markY);
+                ctx.stroke();
+                ctx.fillText(`${mark}cm`, cx - 108, markY + 3);
+
+                if (mark === selectedHeight) {
+                    ctx.save();
+                    ctx.setLineDash([3, 3]);
+                    ctx.strokeStyle = '#059669';
+                    ctx.beginPath();
+                    ctx.moveTo(cx - 65, markY);
+                    ctx.lineTo(cx + 65, markY);
+                    ctx.stroke();
+                    ctx.restore();
+                }
+            });
+
+            // 3. Galvanometer Base Box & Wiring
+            ctx.strokeStyle = '#3b82f6';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(cx - coilWidth / 2, coilCenterY - 10);
+            ctx.lineTo(cx - 80, coilCenterY - 10);
+            ctx.lineTo(cx - 80, h - 22);
+            ctx.lineTo(cx - 25, h - 22);
+            ctx.stroke();
+
+            ctx.strokeStyle = '#ef4444';
+            ctx.beginPath();
+            ctx.moveTo(cx + coilWidth / 2, coilCenterY + 10);
+            ctx.lineTo(cx + 80, coilCenterY + 10);
+            ctx.lineTo(cx + 80, h - 22);
+            ctx.lineTo(cx + 25, h - 22);
+            ctx.stroke();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.strokeStyle = '#cbd5e1';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.roundRect(cx - 25, h - 34, 50, 22, 5);
+            ctx.fill();
+            ctx.stroke();
+            ctx.fillStyle = '#1e293b';
+            ctx.font = 'bold 9px sans-serif';
+            ctx.fillText('검류계 G', cx - 16, h - 20);
+
+            // 4. Back Coil Ellipses
+            const loops = Math.min(Math.max(selectedTurns / 50, 6), 12);
+            ctx.strokeStyle = '#b45309';
+            ctx.lineWidth = 3;
+            for (let i = 0; i < loops; i++) {
+                const ly = coilCenterY - coilHeight / 2 + (i * (coilHeight / loops));
+                ctx.beginPath();
+                ctx.ellipse(cx, ly, coilWidth / 2, 4.5, 0, Math.PI, 0);
+                ctx.stroke();
+            }
+
+            // Transparent Tube
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.strokeStyle = '#cbd5e1';
+            ctx.lineWidth = 1;
+            ctx.fillRect(cx - coilWidth / 2 + 3, coilCenterY - coilHeight / 2 - 6, coilWidth - 6, coilHeight + 12);
+            ctx.strokeRect(cx - coilWidth / 2 + 3, coilCenterY - coilHeight / 2 - 6, coilWidth - 6, coilHeight + 12);
+
+            // 5. Magnet Position
+            const currentMagY = isRunning ? magnetY : (coilCenterY - (selectedHeight * scalePixelPerCm) - 25);
+            drawMagnet(cx, currentMagY);
+
+            // 6. Front Coil Ellipses
+            for (let i = 0; i < loops; i++) {
+                const ly = coilCenterY - coilHeight / 2 + (i * (coilHeight / loops));
+                ctx.beginPath();
+                ctx.ellipse(cx, ly, coilWidth / 2, 4.5, 0, 0, Math.PI);
+                ctx.stroke();
+            }
+        }
+
+        // Draw Bar Magnet with Labels
+        function drawMagnet(x, y) {
+            const w = 22;
+            const h = 34;
+
+            ctx.save();
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.12)';
+            ctx.shadowBlur = 4;
+
+            // N Pole
+            ctx.fillStyle = '#ef4444';
+            ctx.beginPath();
+            ctx.roundRect(x - w / 2, y - h / 2, w, h / 2, [3, 3, 0, 0]);
+            ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 9px sans-serif';
+            ctx.fillText('N', x - 3, y - h / 4 + 3);
+
+            // S Pole
+            ctx.fillStyle = '#3b82f6';
+            ctx.beginPath();
+            ctx.roundRect(x - w / 2, y, w, h / 2, [0, 0, 3, 3]);
+            ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 9px sans-serif';
+            ctx.fillText('S', x - 3, y + h / 4 + 3);
+
+            ctx.restore();
+        }
+
+        // Faraday's Law Math Model Equation
+        function calculateVoltage(posCm, velCmS) {
+            const sigma = 1.8; // cm
+            const N_factor = selectedTurns / 400; 
+            const speedM_S = velCmS / 100;
+            
+            // Flux derivative Gaussian curve
+            const fluxDerivative = -(posCm / (sigma * sigma)) * Math.exp(-(posCm * posCm) / (2 * sigma * sigma));
+            return N_factor * speedM_S * fluxDerivative * 11.5;
+        }
+
+        function animateSimulation(timestamp) {
+            if (!lastTime) lastTime = timestamp;
+            const dt = Math.min((timestamp - lastTime) / 1000, 0.025);
+            lastTime = timestamp;
+
+            const w = canvas.width;
+            const h = canvas.height;
+            const coilCenterY = h - 55;
+            const scalePixelPerCm = Math.min((h - 100) / 18, 9);
+
+            simTime += dt;
+            magnetVelocity += g * dt;
+            magnetY += magnetVelocity * dt;
+
+            const posCm = (magnetY - coilCenterY) / scalePixelPerCm;
+            const voltage = calculateVoltage(posCm, magnetVelocity);
+
+            if (Math.abs(voltage) > Math.abs(currentPeakV)) {
+                currentPeakV = voltage;
+            }
+
+            if (Math.abs(posCm) < 0.4 && currentSpeed === 0) {
+                currentSpeed = (magnetVelocity / 100);
+                currentPassTime = simTime;
+            }
+
+            // Real-time LED Glow & Voltage Readout
+            const absV = Math.abs(voltage);
+            const ledBulb = document.getElementById('ledBulb');
+            const voltageReadout = document.getElementById('voltageReadout');
+            
+            voltageReadout.innerText = `${voltage.toFixed(2)} V`;
+            if (absV > 0.15) {
+                const glowColor = voltage > 0 ? '#10b981' : '#ef4444';
+                ledBulb.style.backgroundColor = glowColor;
+                ledBulb.style.boxShadow = `0 0 8px ${glowColor}`;
+                voltageReadout.className = voltage > 0 ? 'text-[11px] font-mono font-bold text-emerald-600' : 'text-[11px] font-mono font-bold text-rose-500';
+            } else {
+                ledBulb.style.backgroundColor = '#cbd5e1';
+                ledBulb.style.boxShadow = 'none';
+                voltageReadout.className = 'text-[11px] font-mono font-bold text-slate-400';
+            }
+
+            // Push Data to current dataset array
+            currentRunDataset.push({ x: parseFloat(simTime.toFixed(3)), y: parseFloat(voltage.toFixed(2)) });
+            chart.update();
+
+            // Update Numerical Displays
+            document.getElementById('resMaxVoltage').innerText = Math.abs(currentPeakV).toFixed(2);
+            if (currentSpeed > 0) {
+                document.getElementById('resSpeed').innerText = currentSpeed.toFixed(2);
+                document.getElementById('resTime').innerText = currentPassTime.toFixed(3);
+            }
+
+            drawScene();
+
+            if (magnetY < h + 30) {
+                animId = requestAnimationFrame(animateSimulation);
+            } else {
+                isRunning = false;
+                document.getElementById('statusTag').innerText = '실험 완료';
+                document.getElementById('statusTag').className = 'text-[10px] px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-bold';
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('startBtn').classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        }
+
+        function startExperiment() {
+            if (isRunning) return;
+
+            isRunning = true;
+            lastTime = null;
+            simTime = 0;
+            magnetVelocity = 0;
+            currentPeakV = 0;
+            currentSpeed = 0;
+            currentPassTime = 0;
+
+            const coilCenterY = canvas.height - 55;
+            const scalePixelPerCm = Math.min((canvas.height - 100) / 18, 9);
+            magnetY = coilCenterY - (selectedHeight * scalePixelPerCm) - 25;
+
+            document.getElementById('statusTag').innerText = '낙하 중...';
+            document.getElementById('statusTag').className = 'text-[10px] px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full font-bold animate-pulse';
+
+            const startBtn = document.getElementById('startBtn');
+            startBtn.disabled = true;
+            startBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
+            // Setup multi-trace overlay dataset in chart
+            const key = `${selectedHeight}cm`;
+            const colorConfig = conditionColors[key] || { border: '#2563eb', bg: 'rgba(37, 99, 235, 0.1)' };
+            const datasetLabel = `높이 ${selectedHeight}cm (${selectedTurns}회)`;
+
+            // Check if dataset for this condition already exists
+            let existingDs = chart.data.datasets.find(ds => ds.label === datasetLabel);
+            if (!existingDs) {
+                currentRunDataset = [];
+                chart.data.datasets.push({
+                    label: datasetLabel,
+                    data: currentRunDataset,
+                    borderColor: colorConfig.border,
+                    backgroundColor: colorConfig.bg,
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    tension: 0.35,
+                    fill: false
+                });
+            } else {
+                existingDs.data = [];
+                currentRunDataset = existingDs.data;
+            }
+
+            animId = requestAnimationFrame(animateSimulation);
+        }
+
+        function resetCurrentDrop() {
+            if (animId) cancelAnimationFrame(animId);
+            isRunning = false;
+
+            document.getElementById('statusTag').innerText = '대기 중';
+            document.getElementById('statusTag').className = 'text-[10px] px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full font-semibold';
+
+            document.getElementById('resMaxVoltage').innerText = '0.00';
+            document.getElementById('resSpeed').innerText = '0.00';
+            document.getElementById('resTime').innerText = '0.000';
+
+            const ledBulb = document.getElementById('ledBulb');
+            ledBulb.style.backgroundColor = '#cbd5e1';
+            ledBulb.style.boxShadow = 'none';
+            document.getElementById('voltageReadout').innerText = '0.00 V';
+            document.getElementById('voltageReadout').className = 'text-[11px] font-mono font-bold text-slate-400';
+
+            const startBtn = document.getElementById('startBtn');
+            startBtn.disabled = false;
+            startBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+
+            drawScene();
+        }
+
+        // Clear All Chart Overlay Lines
+        function clearAllChartData() {
+            if (chart) {
+                chart.data.datasets = [];
+                chart.update();
+            }
+        }
+
+        // Window Event Bindings
+        window.addEventListener('load', () => {
+            initChart();
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+        });
+    </script>
+</body>
+</html>
